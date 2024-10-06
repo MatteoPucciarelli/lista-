@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista della Spesa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li.checked {
+            text-decoration: line-through;
+            color: #aaa;
+        }
+        .add-item {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .button {
+            padding: 10px;
+            margin: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .message {
+            color: #28a745; /* Verde per messaggi di successo */
+            text-align: center;
+            margin-top: 20px;
+        }
+        .error-message {
+            color: #dc3545; /* Rosso per messaggi di errore */
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lista della Spesa</h1>
+    <ul id="shopping-list">
+        <!-- La lista degli alimenti verrà inserita qui dinamicamente -->
+    </ul>
+
+    <div class="add-item">
+        <input type="text" id="new-item" placeholder="Aggiungi un nuovo alimento">
+        <button class="button" onclick="addItem()">Aggiungi</button>
+    </div>
+
+    <div id="feedback" class="message"></div>
+    <div id="error-feedback" class="error-message"></div>
+
+    <script type="module">
+        // Importa le librerie di Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-database.js";
+
+        // Configurazione di Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyXajZYVd1GRtNBzYzXWdmMY7J1Q2Lwwo",
+            authDomain: "lista-spesa-6c8c3.firebaseapp.com",
+            databaseURL: "https://lista-spesa-6c8c3-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "lista-spesa-6c8c3",
+            storageBucket: "lista-spesa-6c8c3.appspot.com",
+            messagingSenderId: "680212515783",
+            appId: "1:680212515783:web:a4a9efdb9a5366be5f27e2",
+            measurementId: "G-W88FTX3HLD"
+        };
+
+        // Inizializza Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Elementi del DOM
+        const shoppingListEl = document.getElementById('shopping-list');
+        const feedbackEl = document.getElementById('feedback');
+        const errorFeedbackEl = document.getElementById('error-feedback');
+
+        // Carica la lista dalla Firebase
+        onValue(ref(database, 'shoppingList'), (snapshot) => {
+            const items = snapshot.val() || {};
+            renderList(items);
+        });
+
+        function renderList(items) {
+            shoppingListEl.innerHTML = '';
+            for (const [key, value] of Object.entries(items)) {
+                const li = document.createElement('li');
+                li.className = value.checked ? 'checked' : '';
+                li.innerHTML = `
+                    <span>${key}</span>
+                    <button onclick="toggleItem('${key}', ${value.checked})">
+                        ${value.checked ? 'Rimuovi' : 'Aggiungi'}
+                    </button>
+                `;
+                shoppingListEl.appendChild(li);
+            }
+        }
+
+        // Aggiungi un nuovo alimento
+        function addItem() {
+            const newItem = document.getElementById('new-item').value.trim();
+            feedbackEl.innerText = ''; // Resetta il messaggio di feedback
+            errorFeedbackEl.innerText = ''; // Resetta il messaggio di errore
+
+            if (newItem) {
+                const itemRef = ref(database, 'shoppingList/' + newItem);
+                onValue(itemRef, (snapshot) => {
+                    if (!snapshot.exists()) {
+                        set(itemRef, { checked: false });
+                        document.getElementById('new-item').value = '';  // Pulisce l'input
+                        feedbackEl.innerText = 'Elemento aggiunto alla lista!';
+                    } else {
+                        errorFeedbackEl.innerText = 'Questo alimento è già presente nella lista.';
+                    }
+                });
+            } else {
+                errorFeedbackEl.innerText = 'Per favore, inserisci un alimento.';
+            }
+        }
+
+        // Spunta o rimuovi un alimento
+        function toggleItem(key, currentStatus) {
+            update(ref(database, 'shoppingList/' + key), {
+                checked: !currentStatus
+            });
+        }
+
+        // Rendi le funzioni globali
+        window.addItem = addItem;
+        window.toggleItem = toggleItem;
+    </script>
+</body>
+</html>
+
